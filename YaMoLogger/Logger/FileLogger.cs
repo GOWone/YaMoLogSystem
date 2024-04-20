@@ -1,32 +1,116 @@
-﻿namespace YaMoLogger
+﻿using System.Text.RegularExpressions;
+
+namespace YaMoLogger
 {
+    /// <summary>
+    /// 文件日志器
+    /// </summary>
     public class FileLogger : Logger
     {
-        private readonly string _logPath = "log.txt";
-
-        public override void Debug(string message)
+        private readonly object _lock = new();   
+        public override void Log(string message, LoggerPriority priority)
         {
-           File.AppendAllText(_logPath, message + Environment.NewLine);
+            var logPath = LoggerConfigHelper.GetLogPath();
+            if (this.IsWriteable(priority))
+            {
+                lock (_lock)
+                {
+                    CheckIsBackups();
+                    CheckDirectory(logPath);
+                    File.AppendAllText(logPath, message);
+                }
+            }
         }
 
-        public override void Error(string message)
+        /// <summary>
+        /// 检查是否需要日志滚动 
+        /// </summary>
+        public static void CheckIsBackups()
         {
-            File.AppendAllText(_logPath, message + Environment.NewLine);
+            var logPath = LoggerConfigHelper.GetLogPath();
+            var rollTime = LoggerConfigHelper.GetRollTimeInMinutes();
+            var rollSize = LoggerConfigHelper.GetRollSizeInKb();
+            var file = new FileInfo(logPath);
+            if (!file.Exists)
+            {
+                return;
+            }
+            var timeDiff = DateTime.Now - file.CreationTime;
+            var fileSizeInKb = file.Length / 1024;
+            if (rollTime > 0 && timeDiff.TotalMinutes >= rollTime ||
+                rollSize > 0 && fileSizeInKb >= rollSize)
+            {
+                LogRollBackups();
+            }
         }
 
-        public override void Fatal(string message)
+        /// <summary>
+        /// 日志滚动
+        /// </summary>
+        public static void LogRollBackups()
         {
-            File.AppendAllText(_logPath, message + Environment.NewLine);
+            var flag = LoggerConfigHelper.GetRollBackupsFlag();
+            var newLogPath = $"{flag}.{DateTime.Now:yyyy-MM-dd-HH-mm}.log";
+            var logPath = LoggerConfigHelper.GetLogPath();
+            try
+            {
+                // 最大滚动数检查
+                var maxRollBackups = LoggerConfigHelper.GetMaxRollBackups();
+                if (maxRollBackups > 0)
+                {
+                    ClearOldRollBackups(maxRollBackups);
+                }
+                File.Move(logPath, newLogPath);
+                File.Create(logPath).Close();
+                // 重置创建时间
+                File.SetCreationTime(logPath, DateTime.Now);
+            }
+            catch (Exception ex)
+            {
+                var msg = $"{ex.Message}{ex.StackTrace}{Environment.NewLine}";
+                File.AppendAllText("Exception.log", msg);
+            }
         }
 
-        public override void Info(string message)
+        /// <summary>
+        /// 清理过期日志
+        /// </summary>
+        private static void ClearOldRollBackups(int maxRollBackups)
         {
-            File.AppendAllText(_logPath, message + Environment.NewLine);
+            var logPath = LoggerConfigHelper.GetLogPath();
+            var backupsDir = Path.GetDirectoryName(logPath);
+            var flag = LoggerConfigHelper.GetRollBackupsFlag();
+            if (string.IsNullOrWhiteSpace(backupsDir))
+            {
+                backupsDir = Environment.CurrentDirectory;
+            }
+
+            var logFilePattern = $@"{Regex.Escape(flag)}\..*";
+            var targetFiles = Directory.GetFiles(backupsDir)
+                .Where(f => Regex.IsMatch(Path.GetFileName(f), logFilePattern))
+                .ToArray();
+
+            if (targetFiles.Length >= maxRollBackups)
+            {
+                Array.Sort(targetFiles, (a, b) => File.GetCreationTime(a).CompareTo(File.GetCreationTime(b)));
+
+                for (int i = 0; i <= targetFiles.Length - maxRollBackups; i++)
+                {
+                    File.Delete(targetFiles[i]);
+                }
+            }
         }
 
-        public override void Warn(string message)
+        private static void CheckDirectory(string path)
         {
-            File.AppendAllText(_logPath, message + Environment.NewLine);
+            var dir = Path.GetDirectoryName(path);
+            if (!string.IsNullOrWhiteSpace(dir))
+            {
+                if (!Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
+            }
         }
     }
 }

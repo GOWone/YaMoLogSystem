@@ -1,21 +1,25 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace YaMoLogger
+﻿namespace YaMoLogger
 {
     public abstract class Logger
     {
-        public abstract void Debug(string message);
+        public abstract void Log(string message, LoggerPriority priority);
 
-        public abstract void Info(string message);
-
-        public abstract void Warn(string message);
-
-        public abstract void Error(string message);
-
-        public abstract void Fatal(string message);
+        /// <summary>
+        /// 控制日志级别
+        /// </summary>
+        /// <param name="curPriority"></param>
+        /// <returns></returns>
+        public virtual bool IsWriteable(LoggerPriority curPriority)
+        {
+            return LoggerConfigHelper.GetPriority()?.ToLower() switch
+            {
+                "debug" => true,
+                "info" => curPriority >= LoggerPriority.Info,
+                "warn" => curPriority >= LoggerPriority.Warn,
+                "error" => curPriority >= LoggerPriority.Error,
+                "fatal" => curPriority >= LoggerPriority.Fatal,
+                _ => true
+            };
+        }
     }
 }

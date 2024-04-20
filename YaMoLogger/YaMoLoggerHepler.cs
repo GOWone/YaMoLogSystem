@@ -1,74 +1,57 @@
-﻿using Microsoft.Extensions.Configuration;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using YaMoLogger.Parameters;
+﻿using YaMoLogger.Extensions;
 
 namespace YaMoLogger
 {
     public static class YaMoLoggerHepler
     {
-        private readonly static IConfigurationRoot configuration;
-        private readonly static ConsoleLogger consoleLogger;
-        private readonly static FileLogger fileLogger;
+
+        private readonly static LoggerDecorator consoleLogger;
+        private readonly static LoggerDecorator fileLogger;
 
         static YaMoLoggerHepler()
         {
-            consoleLogger = new ConsoleLogger();
-            fileLogger = new FileLogger();
-            configuration = new ConfigurationBuilder()
-                .AddXmlFile("YaMoLogger.config", true, true)
-                .Build();
+            consoleLogger = new LoggerDecorator(new ConsoleLogger());
+            fileLogger = new LoggerDecorator(new FileLogger());
+
         }
 
-        public static Logger? GetLogger(LoggerPriority curPriority)
+        /// <summary>
+        /// 获取日志器
+        /// </summary>
+        /// <returns></returns>
+        public static Logger? GetLogger()
         {
-            var target = configuration["logger:target:value"];
-            var priority = configuration["logger:priority:value"];
-
-            Logger? logger = target?.ToLower() switch
+            return LoggerConfigHelper.GetLoggerType()?.ToLower() switch
             {
                 "console" => consoleLogger,
                 "file" => fileLogger,
                 _ => null,
             };
-            return priority?.ToLower() switch
-            {
-                "debug" => logger,
-                "info" => curPriority >= LoggerPriority.Info ? logger : null,
-                "warn" => curPriority >= LoggerPriority.Warn ? logger : null,
-                "error" => curPriority >= LoggerPriority.Error ? logger : null,
-                "fatal" => curPriority >= LoggerPriority.Fatal ? logger : null,
-                _ => null
-            };
-
         }
 
         public static void Debug(string message)
         {
-            GetLogger(LoggerPriority.Debug)?.Debug(message);
+            GetLogger()?.Log(message, LoggerPriority.Debug);
         }
 
         public static void Info(string message)
         {
-            GetLogger(LoggerPriority.Info)?.Info(message);
+            GetLogger()?.Log(message, LoggerPriority.Info);
         }
 
         public static void Warn(string message)
         {
-            GetLogger(LoggerPriority.Warn)?.Warn(message);
+            GetLogger()?.Log(message, LoggerPriority.Warn);
         }
 
         public static void Error(string message)
         {
-            GetLogger(LoggerPriority.Error)?.Error(message);
+            GetLogger()?.Log(message, LoggerPriority.Error);
         }
 
         public static void Fatal(string message)
         {
-            GetLogger(LoggerPriority.Fatal)?.Fatal(message);
+            GetLogger()?.Log(message, LoggerPriority.Fatal);
         }
     }
 }

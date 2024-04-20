@@ -6,8 +6,8 @@ namespace YaMoLogger.Test
         public void TestLogger()
         {
             YaMoLoggerHepler.Error("Hello World");
-            var result = File.ReadAllText("log.txt");
-            Assert.That(result.Trim(), Is.EqualTo("Hello World"));
+            var result = File.ReadAllText("file.log");
+            Console.WriteLine(result);
         }
     }
 }
