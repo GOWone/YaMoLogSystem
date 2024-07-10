@@ -8,6 +8,11 @@ namespace YaMoLogger
     public class FileLogger : Logger
     {
         private readonly object _lock = new();   
+        /// <summary>
+        /// 输出日志
+        /// </summary>
+        /// <param name="message"></param>
+        /// <param name="priority"></param>
         public override void Log(string message, LoggerPriority priority)
         {
             var logPath = LoggerConfigHelper.GetLogPath();
@@ -101,6 +106,10 @@ namespace YaMoLogger
             }
         }
 
+        /// <summary>
+        /// 路径检查
+        /// </summary>
+        /// <param name="path"></param>
         private static void CheckDirectory(string path)
         {
             var dir = Path.GetDirectoryName(path);
