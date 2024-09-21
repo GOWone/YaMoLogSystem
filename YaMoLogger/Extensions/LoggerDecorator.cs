@@ -10,6 +10,7 @@
         {
             this._logger = logger;
         }
+
         public override void Log(string message, LoggerPriority priority)
         {
             var priorityStr = priority switch
@@ -28,6 +29,5 @@
                 .Replace("%newline", Environment.NewLine);
             this._logger.Log(newMsg, priority);
         }
-    
     }
 }
