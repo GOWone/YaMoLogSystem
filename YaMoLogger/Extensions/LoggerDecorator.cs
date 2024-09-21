@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.FileSystemGlobbing.Internal;
-
-namespace YaMoLogger.Extensions
+﻿namespace YaMoLogger.Extensions
 {
     /// <summary>
     /// Logger装饰器类
